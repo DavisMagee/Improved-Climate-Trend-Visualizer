@@ -1,4 +1,4 @@
-# Improved-Climate-Data-Visualizer
+# Improved-Climate-Trend-Visualizer
 Improved version of my Climate Data Visualizer. 
 
 
