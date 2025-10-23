@@ -1,5 +1,5 @@
 # Improved-Climate-Trend-Visualizer
-Improved version of my Climate Data Visualizer. 
+Improved version of my Climate Trend Visualizer. 
 
 
 Now utilizes NOAA's NCEI's API so that the user no longer has to provide files to the program. 
