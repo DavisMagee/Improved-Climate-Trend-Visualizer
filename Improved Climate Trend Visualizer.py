@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Oct 23 13:20:49 2025
 
-@author: Davis
+@author: Davis Magee
+Email: Davis.magee01@gmail.com
+X (formerly Twitter): @DavisMagee_Wx
 """
 
 # Importing the necessary libraries
@@ -46,7 +47,7 @@ def get_date_range():
     # Get end year
     while True:
         try:
-            end_year = int(input(f"Enter end year (e.g., {current_year}): "))
+            end_year = int(input(f"Enter end season (e.g., {current_year}): "))
             if start_year <= end_year <= current_year:
                 break
             else:
@@ -117,7 +118,7 @@ def fetch_noaa_data_single(station_id, start_date, end_date):
         'stations': station_id,
         'startDate': start_date,
         'endDate': end_date,
-        'dataTypes': 'TMIN',
+        'dataTypes': 'TMIN,RHAV',
         'units': 'standard',
         'format': 'json',
         'includeAttributes': 'false'
@@ -149,14 +150,17 @@ def fetch_noaa_data_single(station_id, start_date, end_date):
 def process_data(data):
     dates = []
     tmins = []
+    rhav = []
     
     records_processed = 0
     records_with_tmin = 0
+    records_with_rhav = 0
     
     for record in data:
         records_processed += 1
         date = record.get('DATE', '')
         tmin_str = record.get('TMIN', '')
+        rhav_str = record.get('RHAV', '')
         
         if date and tmin_str and tmin_str.strip():
             try:
@@ -168,9 +172,19 @@ def process_data(data):
             except (ValueError, TypeError) as e:
                 # Skip records with invalid temperature data
                 continue
+            
+        if date and rhav_str and rhav_str.strip():
+            try:
+                # Convert relative humidity to integer
+                rhav_value = int(float(rhav_str))
+                rhav.append(rhav_value)
+                records_with_rhav += 1
+            except (ValueError, TypeError) as e:
+                # Skip records with invalid relative humidity data
+                continue
     
-    print(f"Processed {records_processed} records, found {records_with_tmin} with TMIN data")
-    return dates, tmins
+    print(f"Processed {records_processed} records, found {records_with_tmin} with TMIN data, found {records_with_rhav} with RHAV data")
+    return dates, tmins, rhav
 
 # Function to validate data quality
 def validate_data(dates, tmins):
@@ -199,6 +213,25 @@ def validate_data(dates, tmins):
     except Exception as e:
         print(f"Error during data validation: {e}")
         return True  # Continue even if validation fails
+
+# Function to calculate average humidt for the station
+def calculate_average_humidity(rhav_values):
+    """
+    Calculate average relative humidity from the RHAV values collected
+    during processing. Only considers records where RHAV was present
+    and valid (already filtered by process_data).
+    """
+    # FIX: function now takes the humidity list as a parameter instead
+    # of referring to undefined names (rhav, rhav_values, data)
+    if not rhav_values:
+        print("No valid RHAV values found in data")
+        return None
+    
+    avg_humidity = sum(rhav_values) / len(rhav_values)
+    
+    print(f"Average RH calculated from {len(rhav_values)} records")
+    
+    return avg_humidity
 
 def main():
     print("NOAA Climate Data Analysis - Days Below Freezing")
@@ -234,7 +267,7 @@ def main():
         return
     
     # Process the data
-    dates, tmins = process_data(data)
+    dates, tmins, rhav = process_data(data)
     
     if not dates:
         print("No valid temperature data found in the response.")
@@ -246,6 +279,8 @@ def main():
     validate_data(dates, tmins)
     
     print(f"Successfully processed {len(dates)} records with minimum temperature data")
+    
+    avg_humidity = calculate_average_humidity(rhav)
     
     # Continue with original processing logic...
     years_in_data = []
@@ -305,13 +340,19 @@ def main():
     else:
         print("Not enough data points for trend analysis")
         trend_label = ''
+        
+    # Printing the average Relative Humidity
+    if calculate_average_humidity is not None:
+        print(f"Average relative humidity: {avg_humidity:.2f}%")
+    else:
+        print("No relative humidity data available for this station/date range")        
 
     # Plotting the data
     fig, ax = plt.subplots(figsize=(12, 6))
 
     ax.plot(years_in_data, days_below_freezing, linestyle='-', color='b', 
             marker='o', markersize=4, label="Days Below Freezing")
-    
+
     # Check if trend_line exists and has data
     if trend_line is not None and len(trend_line) > 0:
         ax.plot(years_in_data, trend_line, linestyle='--', color='r', 
